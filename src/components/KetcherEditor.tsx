@@ -1,10 +1,11 @@
-import React, {
+import {
   useRef,
   useEffect,
   useState,
   forwardRef,
   useImperativeHandle,
 } from 'react';
+// @ts-ignore
 import { StandaloneStructServiceProvider } from 'ketcher-standalone';
 import { Editor } from 'ketcher-react';
 import 'ketcher-react/dist/index.css';
@@ -17,6 +18,7 @@ interface KetcherEditorProps {
 
 export interface KetcherEditorRef {
   getSmiles: () => Promise<string>;
+  clear: () => Promise<void>;
 }
 
 const KetcherEditor = forwardRef<KetcherEditorRef, KetcherEditorProps>(
@@ -58,11 +60,43 @@ const KetcherEditor = forwardRef<KetcherEditorRef, KetcherEditorProps>(
       throw new Error('Ketcher editor not initialized');
     };
 
-    // Expose getSmiles method to parent component via ref
+    const clear = async () => {
+      if (ketcherRef.current) {
+        try {
+          // Try different approaches to clear the editor
+          if (typeof ketcherRef.current.setMolecule === 'function') {
+            await ketcherRef.current.setMolecule('');
+          } else if (typeof ketcherRef.current.clear === 'function') {
+            ketcherRef.current.clear();
+          } else if (typeof ketcherRef.current.setKetcher === 'function') {
+            ketcherRef.current.setKetcher('');
+          } else if (ketcherRef.current.editor) {
+            const editor = ketcherRef.current.editor;
+            if (typeof editor.setMolecule === 'function') {
+              await editor.setMolecule('');
+            } else if (typeof editor.clear === 'function') {
+              editor.clear();
+            }
+          } else {
+            // Try to set an empty molfile
+            const emptyMolfile =
+              '\n\n\n  0  0  0  0  0  0  0  0  0  0999 V2000\nM  END';
+            if (typeof ketcherRef.current.setMolecule === 'function') {
+              await ketcherRef.current.setMolecule(emptyMolfile);
+            }
+          }
+        } catch (err) {
+          // Silently handle clear errors
+        }
+      }
+    };
+
+    // Expose methods to parent component via ref
     useImperativeHandle(
       ref,
       () => ({
         getSmiles,
+        clear,
       }),
       []
     );
@@ -110,6 +144,11 @@ const KetcherEditor = forwardRef<KetcherEditorRef, KetcherEditorProps>(
             structServiceProvider={structServiceProvider}
             onInit={(ketcher: any) => {
               ketcherRef.current = ketcher;
+            }}
+            errorHandler={(ketcherError: any) => {
+              setError(
+                `Ketcher error: ${ketcherError.message || 'Unknown error'}`
+              );
             }}
           />
         )}

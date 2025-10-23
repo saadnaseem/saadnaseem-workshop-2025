@@ -1,0 +1,9 @@
+Model Performance Results
+==============================
+
+AUPRC: 0.871316561275947
+AUROC: 0.8681481481481481
+Num_Samples: 52
+Class_Distribution: {0: 27, 1: 25}
+Mean_Prediction: 0.5919236257478098
+Std_Prediction: 0.29162480445011
